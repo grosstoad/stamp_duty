@@ -203,7 +203,12 @@ function calculateMortgageRegistrationFee(state: State): number {
 export function calculatePropertyPurchaseCosts(request: PropertyPurchaseRequest): PropertyPurchaseResponse {
   const { propertyValue, state, loanPurpose, firstHomeBuyer } = request;
   
+  const standardStampDuty = calculateStandardStampDuty(propertyValue, state, 'INVESTOR');
+  
   const stampDuty = calculateStandardStampDuty(propertyValue, state, loanPurpose);
+  
+  const pporConcessionAmount = loanPurpose === 'OWNER_OCCUPIER' ? 
+    Math.max(0, standardStampDuty - stampDuty) : 0;
   
   const fhbConcessionAmount = firstHomeBuyer ? 
     calculateFirstHomeBuyerConcession(stampDuty, propertyValue, state) : 0;
@@ -219,6 +224,7 @@ export function calculatePropertyPurchaseCosts(request: PropertyPurchaseRequest)
   return {
     stampDuty,
     fhbConcessionAmount,
+    pporConcessionAmount,
     finalStampDutyAmount,
     transferFee,
     mortgageRegistrationFee,

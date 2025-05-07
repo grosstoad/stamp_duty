@@ -10,8 +10,9 @@ export interface PropertyPurchaseRequest {
 
 export interface PropertyPurchaseResponse {
   stampDuty: number;                  // Calculated stamp duty amount
-  fhbConcessionAmount: number;        // This will be stampDuty * (1 - concessionPercentage)
-  finalStampDutyAmount: number;       // This will be stampDuty - fbhConcessionAmount
+  fhbConcessionAmount: number;        // First home buyer concession amount
+  pporConcessionAmount: number;       // Principal place of residence concession amount
+  finalStampDutyAmount: number;       // This will be stampDuty - fhbConcessionAmount - pporConcessionAmount
   transferFee: number;                // Property transfer registration fee
   mortgageRegistrationFee: number;    // Mortgage registration fee
   totalGovernmentCosts: number;       // Total of all government costs (finalStampDutyAmount + transferFee + mortgageRegistrationFee)

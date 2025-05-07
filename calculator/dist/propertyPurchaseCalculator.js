@@ -11,14 +11,26 @@ function calculateNTStampDuty(value) {
     return 0.06571441 * Math.pow(value / 1000, 2) + 15 * (value / 1000) + 500;
 }
 /**
- * Calculate standard stamp duty based on property value and state rates
+ * Calculate standard stamp duty based on property value, state rates, and loan purpose
  * @param propertyValue Property value in AUD
  * @param state Australian state/territory code
+ * @param loanPurpose Loan purpose (OWNER_OCCUPIER or INVESTOR)
  * @returns Calculated standard stamp duty amount
  */
-function calculateStandardStampDuty(propertyValue, state) {
+function calculateStandardStampDuty(propertyValue, state, loanPurpose = 'INVESTOR') {
     const stateRates = ratesData_1.ratesAndFees.rates[state];
-    const standardRates = stateRates.stampDuty.standard;
+    const isPPOR = loanPurpose === 'OWNER_OCCUPIER';
+    const principalResidenceRates = stateRates.stampDuty.principalResidence;
+    let useStandardRates = !isPPOR || !principalResidenceRates || principalResidenceRates === 'SPECIAL';
+    if (state === 'VIC' && isPPOR && principalResidenceRates && Array.isArray(principalResidenceRates)) {
+        const maxThreshold = principalResidenceRates.reduce((max, rate) => {
+            return rate.maxValue !== null && rate.maxValue > max ? rate.maxValue : max;
+        }, 0);
+        if (propertyValue > maxThreshold) {
+            useStandardRates = true;
+        }
+    }
+    const rateStructure = useStandardRates ? stateRates.stampDuty.standard : principalResidenceRates;
     if (state === 'NT') {
         if (propertyValue <= 525000) {
             return Math.round(calculateNTStampDuty(propertyValue));
@@ -35,7 +47,7 @@ function calculateStandardStampDuty(propertyValue, state) {
     }
     let result = 0;
     let found = false;
-    for (const rate of standardRates) {
+    for (const rate of rateStructure) {
         if (found)
             break;
         const min = rate.threshold;
@@ -199,7 +211,10 @@ function calculateMortgageRegistrationFee(state) {
  */
 function calculatePropertyPurchaseCosts(request) {
     const { propertyValue, state, loanPurpose, firstHomeBuyer } = request;
-    const stampDuty = calculateStandardStampDuty(propertyValue, state);
+    const standardStampDuty = calculateStandardStampDuty(propertyValue, state, 'INVESTOR');
+    const stampDuty = calculateStandardStampDuty(propertyValue, state, loanPurpose);
+    const pporConcessionAmount = loanPurpose === 'OWNER_OCCUPIER' ?
+        Math.max(0, standardStampDuty - stampDuty) : 0;
     const fhbConcessionAmount = firstHomeBuyer ?
         calculateFirstHomeBuyerConcession(stampDuty, propertyValue, state) : 0;
     const finalStampDutyAmount = stampDuty - fhbConcessionAmount;
@@ -209,6 +224,7 @@ function calculatePropertyPurchaseCosts(request) {
     return {
         stampDuty,
         fhbConcessionAmount,
+        pporConcessionAmount,
         finalStampDutyAmount,
         transferFee,
         mortgageRegistrationFee,

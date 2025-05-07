@@ -9,6 +9,7 @@ export interface PropertyPurchaseRequest {
 export interface PropertyPurchaseResponse {
     stampDuty: number;
     fhbConcessionAmount: number;
+    pporConcessionAmount: number;
     finalStampDutyAmount: number;
     transferFee: number;
     mortgageRegistrationFee: number;
