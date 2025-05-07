@@ -1,4 +1,4 @@
-import { PropertyPurchaseRequest, PropertyPurchaseResponse, State, RateThreshold } from './types';
+import { PropertyPurchaseRequest, PropertyPurchaseResponse, State, RateThreshold, LoanPurposeType } from './types';
 import { ratesAndFees } from './ratesData';
 
 /**
@@ -11,14 +11,31 @@ function calculateNTStampDuty(value: number): number {
 }
 
 /**
- * Calculate standard stamp duty based on property value and state rates
+ * Calculate standard stamp duty based on property value, state rates, and loan purpose
  * @param propertyValue Property value in AUD
  * @param state Australian state/territory code
+ * @param loanPurpose Loan purpose (OWNER_OCCUPIER or INVESTOR)
  * @returns Calculated standard stamp duty amount
  */
-function calculateStandardStampDuty(propertyValue: number, state: State): number {
+function calculateStandardStampDuty(propertyValue: number, state: State, loanPurpose: LoanPurposeType = 'INVESTOR'): number {
   const stateRates = ratesAndFees.rates[state];
-  const standardRates = stateRates.stampDuty.standard;
+  
+  const isPPOR = loanPurpose === 'OWNER_OCCUPIER';
+  const principalResidenceRates = stateRates.stampDuty.principalResidence;
+  
+  let useStandardRates = !isPPOR || !principalResidenceRates || principalResidenceRates === 'SPECIAL';
+  
+  if (state === 'VIC' && isPPOR && principalResidenceRates && Array.isArray(principalResidenceRates)) {
+    const maxThreshold = principalResidenceRates.reduce((max, rate) => {
+      return rate.maxValue !== null && rate.maxValue > max ? rate.maxValue : max;
+    }, 0);
+    
+    if (propertyValue > maxThreshold) {
+      useStandardRates = true;
+    }
+  }
+  
+  const rateStructure = useStandardRates ? stateRates.stampDuty.standard : principalResidenceRates;
   
   if (state === 'NT') {
     if (propertyValue <= 525000) {
@@ -35,7 +52,7 @@ function calculateStandardStampDuty(propertyValue: number, state: State): number
   let result = 0;
   let found = false;
   
-  for (const rate of standardRates) {
+  for (const rate of rateStructure) {
     if (found) break;
     
     const min = rate.threshold;
@@ -186,7 +203,7 @@ function calculateMortgageRegistrationFee(state: State): number {
 export function calculatePropertyPurchaseCosts(request: PropertyPurchaseRequest): PropertyPurchaseResponse {
   const { propertyValue, state, loanPurpose, firstHomeBuyer } = request;
   
-  const stampDuty = calculateStandardStampDuty(propertyValue, state);
+  const stampDuty = calculateStandardStampDuty(propertyValue, state, loanPurpose);
   
   const fhbConcessionAmount = firstHomeBuyer ? 
     calculateFirstHomeBuyerConcession(stampDuty, propertyValue, state) : 0;

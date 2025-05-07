@@ -36,7 +36,7 @@ export const ratesAndFees: RatesAndFees = {
           {threshold: 0, maxValue: 25000, baseAmount: 0, marginalRate: 0.014},
           {threshold: 25000, maxValue: 130000, baseAmount: 350, marginalRate: 0.024},
           {threshold: 130000, maxValue: 960000, baseAmount: 2870, marginalRate: 0.06},
-          {threshold: 960000, maxValue: 2000000, baseAmount: 0, marginalRate: 0.055},
+          {threshold: 960000, maxValue: 2000000, baseAmount: 52800, marginalRate: 0.055},
           {threshold: 2000000, maxValue: null, baseAmount: 110000, marginalRate: 0.065}
         ],
         firstHomeBuyer: {
